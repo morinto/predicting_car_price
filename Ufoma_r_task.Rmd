@@ -1,0 +1,216 @@
+---
+title: "Ufoma's_r_task"
+author: "Ufoma"
+date: "12/27/2021"
+output: pdf_document
+---
+
+
+Data Description
+Loading Packages
+```{r}
+library(tidyverse)
+library(factoextra)
+library(cluster)
+library(e1071)
+library(rpart)
+```
+
+Importing csv file
+```{r}
+car_sales <- read_csv("Car_sale_ads.csv")
+```
+Explore dataset
+```{r}
+glimpse(car_sales)
+```
+```{r}
+str(car_sales)
+```
+
+Creating a dataframe from the dataset
+```{r}
+car_sales <- data.frame(car_sales, stringsAsFactors = FALSE)
+
+```
+
+Converting datatypes
+```{r}
+#character to factor
+car_sales[sapply(car_sales, is.character)] <- lapply(car_sales[sapply(car_sales,
+                                              is.character)], as.factor)
+
+#doubles to intergers
+car_sales[sapply(car_sales, is.double)] <- lapply(car_sales[sapply(car_sales,
+                                              is.double)], as.integer)
+```
+
+
+Checking for missing data
+```{r}
+colSums(is.na(car_sales))
+```
+
+Removing columns with too many missing values
+```{r}
+car_sales <- car_sales %>%
+  select(-c(Currency, Index, Vehicle_version, Vehicle_generation, CO2_emissions,
+            First_registration_date,Features))
+```
+
+Filling in some missing values
+```{r}
+
+car_sales <- car_sales %>%  mutate(First_owner = case_when(
+  grepl(pattern = "New", x = Condition) ~ "Yes"))
+
+car_sales <- car_sales %>% replace_na(list(First_owner = "No"))
+
+car_sales$First_owner <- as.factor(car_sales$First_owner)
+
+```
+
+Removing row with missing values
+```{r}
+car_sales <- car_sales %>% na.omit()
+```
+
+viewing the dataset
+```{r}
+glimpse(car_sales)
+
+```
+
+```{r}
+View(car_sales)
+str(car_sales)
+```
+
+
+Statistical summaries of dataset
+```{r}
+summary(car_sales)
+```
+
+The Doors_number has an outlier 55 which will be replaced by 5
+```{r}
+car_sales$Doors_number <- replace(car_sales$Doors_number,
+                                  car_sales$Doors_number==55, 5)
+```
+
+
+Regression Algorithms
+
+Simple Linear Regresion
+```{r}
+lr_model <- lm(Price ~ Power_HP, data = car_sales)
+summary(lr_model)
+```
+
+Linear Regression with Multiple Variables
+```{r}
+
+mlg_model <- lm(Price ~ Mileage_km + Displacement_cm3 
+               + Production_year + Power_HP , data = car_sales)
+summary(mlg_model)
+```
+
+Classification Algorithms
+
+Naive Bayes Classifier
+
+Building the model
+```{r}
+naive_model <- naiveBayes(Condition ~ ., data = car_sales)
+```
+
+Testing the model
+```{r}
+naive_predict <- predict(naive_model, car_sales)
+table(naive_predict, car_sales$Condition)
+```
+
+Decision Tree Classifier
+
+Building the model
+```{r}
+dtree_model <- rpart(Condition ~ ., data = car_sales, method = 'class')
+```
+
+
+Analyzing results
+
+```{r}
+plotcp(dtree_model)
+```
+
+```{r}
+summary(dtree_model)
+```
+
+Unsupervised Learning Algorithms
+
+k-Means Clustering Algorithm
+
+Creating a subset of integer variables from the dataset for K_means algorithm
+```{r}
+kcar_sales <- car_sales %>%
+  select(c(Price, Production_year, Mileage_km, Power_HP, Displacement_cm3))
+
+```
+
+Building the model
+```{r}
+K_model <- kmeans(kcar_sales, 5, iter.max = 10)
+```
+
+Analysing the model
+```{r}
+kcar_sales <- cbind(kcar_sales, Clusternum = K_model$cluster) #adding the cluster number
+                                                              #to the dataset
+View(kcar_sales)
+summary(K_model)
+```
+
+
+Hierarchical Clustering 
+
+Spliting the data to fit the model
+```{r}
+hcar_sales <- kcar_sales[1:5000,]
+
+```
+
+Creating a distance matrix and Building the model
+```{r}
+h_dist <- dist(hcar_sales, method = "euclidian")  #distance matrix
+
+h_fit <- hclust(h_dist, method = "ward")
+
+h_groups <- cutree(h_fit, 5)
+
+h_groups
+
+```
+
+Adding cluster grouping to dataset
+```{r}
+hcar_sales <- cbind(hcar_sales, Clusternum = h_groups)
+View(hcar_sales)
+```
+
+Displaying the number of observations in each cluster
+```{r}
+table(h_groups)
+```
+
+
+
+
+
+
+
+
+
+
+
